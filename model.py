@@ -21,8 +21,8 @@ class MHSA(nn.Module):
         self.key = nn.Conv2d(n_dims, n_dims, kernel_size=1)
         self.value = nn.Conv2d(n_dims, n_dims, kernel_size=1)
 
-        self.rel_h = nn.Parameter(torch.randn([1, n_dims, height, 1]), requires_grad=True)
-        self.rel_w = nn.Parameter(torch.randn([1, n_dims, 1, width]), requires_grad=True)
+        self.rel_h = nn.Parameter(torch.randn([1, n_dims, 1, height]), requires_grad=True)
+        self.rel_w = nn.Parameter(torch.randn([1, n_dims, width, 1]), requires_grad=True)
 
         self.softmax = nn.Softmax(dim=-1)
 
@@ -58,7 +58,7 @@ class Bottleneck(nn.Module):
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, padding=1, stride=stride, bias=False)
         else:
             self.conv2 = nn.ModuleList()
-            self.conv2.append(MHSA(planes, width=resolution, height=resolution))
+            self.conv2.append(MHSA(planes, width=int(resolution[0]), height=int(resolution[1])))
             if stride == 2:
                 self.conv2.append(nn.AvgPool2d(2, 2))
             self.conv2 = nn.Sequential(*self.conv2)
@@ -85,20 +85,23 @@ class Bottleneck(nn.Module):
 # reference
 # https://github.com/kuangliu/pytorch-cifar/blob/master/models/resnet.py
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=1000, resolution=224):
+    def __init__(self, block, num_blocks, num_classes=1000, resolution=(224, 224)):
         super(ResNet, self).__init__()
         self.in_planes = 64
-        self.resolution = resolution
+        self.resolution = list(resolution)
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         if self.conv1.stride[0] == 2:
-            self.resolution /= 2
+            self.resolution[0] /= 2
+        if self.conv1.stride[1] == 2:
+            self.resolution[1] /= 2
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1) # for ImageNet
         if self.maxpool.stride == 2:
-            self.resolution /= 2
+            self.resolution[0] /= 2
+            self.resolution[1] /= 2
 
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
@@ -115,9 +118,10 @@ class ResNet(nn.Module):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for idx, stride in enumerate(strides):
-            layers.append(block(self.in_planes, planes, stride, mhsa, int(self.resolution)))
+            layers.append(block(self.in_planes, planes, stride, mhsa, self.resolution))
             if stride == 2:
-                self.resolution /= 2
+                self.resolution[0] /= 2
+                self.resolution[1] /= 2
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -137,7 +141,7 @@ class ResNet(nn.Module):
 
 
 def ResNet50():
-    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=1000)
+    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=10)
 
 
 def main():
