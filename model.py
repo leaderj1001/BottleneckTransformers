@@ -140,8 +140,8 @@ class ResNet(nn.Module):
         return out
 
 
-def ResNet50():
-    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=10)
+def ResNet50(num_classes=1000, resolution=(256, 256)):
+    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, resolution=resolution)
 
 
 def main():
