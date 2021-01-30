@@ -49,7 +49,7 @@ class MHSA(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_planes, planes, stride=1, mhsa=False):
+    def __init__(self, in_planes, planes, stride=1, mhsa=False, resolution=None):
         super(Bottleneck, self).__init__()
 
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
@@ -57,17 +57,11 @@ class Bottleneck(nn.Module):
         if not mhsa:
             self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, padding=1, stride=stride, bias=False)
         else:
+            self.conv2 = nn.ModuleList()
+            self.conv2.append(MHSA(planes, width=resolution, height=resolution))
             if stride == 2:
-                self.conv2 = nn.Sequential(
-                    MHSA(planes, width=14, height=14),
-                    # MHSA(planes, width=8, height=8), # for CIFAR10
-                    nn.AvgPool2d(2, 2),
-                )
-            else:
-                self.conv2 = nn.Sequential(
-                    MHSA(planes, width=7, height=7),
-                    # MHSA(planes, width=4, height=4), # for CIFAR10
-                )
+                self.conv2.append(nn.AvgPool2d(2, 2))
+            self.conv2 = nn.Sequential(*self.conv2)
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(self.expansion * planes)
@@ -91,15 +85,20 @@ class Bottleneck(nn.Module):
 # reference
 # https://github.com/kuangliu/pytorch-cifar/blob/master/models/resnet.py
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=1000):
+    def __init__(self, block, num_blocks, num_classes=1000, resolution=224):
         super(ResNet, self).__init__()
         self.in_planes = 64
+        self.resolution = resolution
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        if self.conv1.stride[0] == 2:
+            self.resolution /= 2
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1) # for ImageNet
+        if self.maxpool.stride == 2:
+            self.resolution /= 2
 
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
@@ -116,7 +115,9 @@ class ResNet(nn.Module):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for idx, stride in enumerate(strides):
-            layers.append(block(self.in_planes, planes, stride, mhsa))
+            layers.append(block(self.in_planes, planes, stride, mhsa, int(self.resolution)))
+            if stride == 2:
+                self.resolution /= 2
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
