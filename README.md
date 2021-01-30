@@ -14,12 +14,21 @@
 <img width="516" alt="스크린샷 2021-01-28 오후 4 50 19" src="https://user-images.githubusercontent.com/22078438/106106482-f04da900-6188-11eb-8f15-820811c2f908.png">
 
 ## Usage (example)
-```python
-from model import MHSA
+ - Model
+ ```python
+ from model import Model
 
-resolution = 14
-mhsa = MHSA(planes, width=resolution, height=resolution)
-```
+ model = ResNet50(num_classes=1000, resolution=(224, 224))
+ x = torch.randn([2, 3, 224, 224])
+ print(model(x).size())
+ ```
+ - Module
+ ```python
+ from model import MHSA
+
+ resolution = 14
+ mhsa = MHSA(planes, width=resolution, height=resolution)
+ ```
 
 
 ## Reference
