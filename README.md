@@ -7,8 +7,9 @@
 
 | Model | heads | Params (M) | Acc (%) |
 |:-:|:-:|:-:|:-:|
-| ResNet50 baseline ([ref](https://github.com/kuangliu/pytorch-cifar)) | 23.5M | 93.62 |
+| ResNet50 baseline ([ref](https://github.com/kuangliu/pytorch-cifar)) |  | 23.5M | 93.62 |
 | BoTNet-50 | 1 | 18.8M | 95.11% |
+| BoTNet-50 | 4 | 18.8M | 95.78% |
 | BoTNet-S1-50 | 1 | 18.8M | 95.67% |
 | BoTNet-S1-59 | 1 | 27.5M | 95.98% |
 | BoTNet-S1-77 | 1 | 44.9M | wip |
